@@ -24,19 +24,13 @@ actor {
 
   // Return the principal identifier of the caller of this method.
   public shared query (msg) func whoami() : async Principal {
-    msg.caller;
+    return msg.caller;
   };
 
   // Return the principal identifier of this canister.
   public func id() : async Principal {
     return await whoami();
   };
-
-  // // Return the principal identifier of this canister via the optional `this` binding.
-  // // This is much quicker than `id()` above, since it avoids the latency of `await whoami()`.
-  // public func idQuick() : async Principal {
-  //   return Principal.fromActor(this);
-  // };
 
   type Campaign = {
     id : Nat;
@@ -63,6 +57,12 @@ actor {
     description : Text;
   };
 
+  // Define constants
+  let DEFAULT_IMAGE_URL = "default_image_url";
+  let DEFAULT_BALANCE = 0;
+  let DEFAULT_DONATIONS_COUNT = 0;
+  let DEFAULT_RAISED = 0;
+
   private type PayloadCreateCampaign = {
     owner: Text;
     name: Text;
@@ -74,19 +74,25 @@ actor {
   let campaigns = Buffer.Buffer<Campaign>(10);
 
   public shared ({caller}) func createCampaign(payload: PayloadCreateCampaign) : async Nat {
+    if (Text.isEmpty(payload.name) || Text.isEmpty(payload.description) || payload.goal == 0 || payload.deadline <= 0) {
+      // Input validation failed
+      return 0;
+    }
+
     let campaign : Campaign = {
-      id = 1;
+      id = campaigns.size() + 1;
       name = payload.name;
       goal = payload.goal;
-      balance = 1;
+      balance = DEFAULT_BALANCE;
       owner = payload.owner;
-      donationsCount = 1;
+      donationsCount = DEFAULT_DONATIONS_COUNT;
       deadline = payload.deadline;
       description = payload.description;
       isNotFinished = true;
-      imageURL = "Text";
-      raised = 1;
+      imageURL = DEFAULT_IMAGE_URL;
+      raised = DEFAULT_RAISED;
     };
+
     campaigns.add(campaign);
     return campaign.id;
   };
@@ -96,6 +102,23 @@ actor {
   };
 
   public query func getCampaign(index : Nat) : async Campaign {
+    if (index < 0 || index >= campaigns.size()) {
+      // Index out of bounds
+      return {
+        id = 0;
+        name = "Invalid Campaign";
+        goal = 0;
+        balance = 0;
+        owner = "Unknown";
+        donationsCount = 0;
+        deadline = 0;
+        description = "Invalid Campaign";
+        isNotFinished = false;
+        imageURL = DEFAULT_IMAGE_URL;
+        raised = 0;
+      };
+    }
+
     return campaigns.get(index);
   };
 
