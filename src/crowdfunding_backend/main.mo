@@ -73,11 +73,15 @@ actor {
 
   let campaigns = Buffer.Buffer<Campaign>(10);
 
+  private func isTextEmpty(text: Text): Bool {
+    return Text.size(text) == 0
+  };
+
   public shared ({caller}) func createCampaign(payload: PayloadCreateCampaign) : async Nat {
-    if (Text.isEmpty(payload.name) || Text.isEmpty(payload.description) || payload.goal == 0 || payload.deadline <= 0) {
+    if (isTextEmpty(payload.name) or isTextEmpty(payload.description) or payload.goal == 0 or payload.deadline <= 0) {
       // Input validation failed
       return 0;
-    }
+    };
 
     let campaign : Campaign = {
       id = campaigns.size() + 1;
@@ -102,7 +106,7 @@ actor {
   };
 
   public query func getCampaign(index : Nat) : async Campaign {
-    if (index < 0 || index >= campaigns.size()) {
+    if (index < 0 or index >= campaigns.size()) {
       // Index out of bounds
       return {
         id = 0;
@@ -117,7 +121,7 @@ actor {
         imageURL = DEFAULT_IMAGE_URL;
         raised = 0;
       };
-    }
+    };
 
     return campaigns.get(index);
   };
