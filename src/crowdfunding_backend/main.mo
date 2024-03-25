@@ -7,6 +7,7 @@ import Array "mo:base/Array";
 import Bool "mo:base/Bool";
 import Buffer "mo:base/Buffer";
 import WhoAmI "WhoAmI";
+import D "mo:base/Debug";
 
 actor {
 
@@ -64,33 +65,49 @@ actor {
   let DEFAULT_RAISED = 0;
 
   private type PayloadCreateCampaign = {
+    name : Text;
+    goal : Nat;
+    balance : Nat;
+    deadline : Int;
     owner: Text;
-    name: Text;
-    description: Text;
-    goal: Nat;
-    deadline: Int;
+    description : Text;
+    isNotFinished : Bool;
   };
 
   let campaigns = Buffer.Buffer<Campaign>(10);
 
+  var raised: Nat = DEFAULT_RAISED;
+
+  private func isTextEmpty(text: Text): Bool {
+    return Text.size(text) == 0
+  };
+
+// 
   public shared ({caller}) func createCampaign(payload: PayloadCreateCampaign) : async Nat {
-    if (Text.isEmpty(payload.name) || Text.isEmpty(payload.description) || payload.goal == 0 || payload.deadline <= 0) {
+    if (isTextEmpty(payload.name) or isTextEmpty(payload.description) or payload.goal == 0 or payload.deadline <= 0) {
       // Input validation failed
       return 0;
-    }
+    };
+    D.print("Caller is: " # debug_show caller);
+
+    let raisedTotal: Nat = 0;
+
+    for (campaign in campaigns.vals()) {
+      raised += campaign.raised;
+    };
 
     let campaign : Campaign = {
       id = campaigns.size() + 1;
       name = payload.name;
       goal = payload.goal;
-      balance = DEFAULT_BALANCE;
+      balance = payload.balance;
       owner = payload.owner;
-      donationsCount = DEFAULT_DONATIONS_COUNT;
+      donationsCount = campaigns.size();
       deadline = payload.deadline;
       description = payload.description;
       isNotFinished = true;
       imageURL = DEFAULT_IMAGE_URL;
-      raised = DEFAULT_RAISED;
+      raised = raised;
     };
 
     campaigns.add(campaign);
@@ -101,8 +118,8 @@ actor {
     return Buffer.toArray<Campaign>(campaigns);
   };
 
-  public query func getCampaign(index : Nat) : async Campaign {
-    if (index < 0 || index >= campaigns.size()) {
+  public query func getCampaign(index: Nat) : async Campaign {
+    if (index < 0 or index >= campaigns.size()) {
       // Index out of bounds
       return {
         id = 0;
@@ -117,9 +134,47 @@ actor {
         imageURL = DEFAULT_IMAGE_URL;
         raised = 0;
       };
-    }
-
+    };
     return campaigns.get(index);
+    
   };
+
+
+  public query func endOfCampaign(index: Nat, value: Bool): async Campaign {
+    if (index < 0 or index >= campaigns.size()) {
+      // Index out of bounds
+      return {
+        id = 0;
+        name = "Invalid Campaign";
+        goal = 0;
+        balance = 0;
+        owner = "Unknown";
+        donationsCount = 0;
+        deadline = 0;
+        description = "Invalid Campaign";
+        isNotFinished = false;
+        imageURL = DEFAULT_IMAGE_URL;
+        raised = 0;
+      };
+    };
+
+    let campaign = campaigns.get(index);
+    let campaignModified : Campaign = {
+      id = campaign.id;
+      name = campaign.name;
+      goal = campaign.goal;
+      balance = campaign.balance;
+      owner = campaign.owner;
+      donationsCount = campaign.donationsCount;
+      deadline = campaign.deadline;
+      description = campaign.description;
+      isNotFinished = value;
+      imageURL = DEFAULT_IMAGE_URL;
+      raised = campaign.raised;
+    };
+    campaigns.put(index, campaignModified);
+    
+    return campaigns.get(index);
+  }
 
 };

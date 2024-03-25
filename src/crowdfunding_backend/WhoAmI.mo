@@ -1,7 +1,7 @@
 import Principal "mo:base/Principal";
 
 shared (install) actor class WhoAmI(someone : Principal) =
-  this { // Bind the optional `this` argument (any name will do)
+  this {
 
   // Return the principal identifier of the wallet canister that installed this
   // canister.
